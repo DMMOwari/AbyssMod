@@ -1,5 +1,6 @@
 using System.Linq;
 using HarmonyLib;
+using Project.Notice;
 using Project.Novel;
 
 namespace AbyssMod.Patches;
@@ -22,5 +23,21 @@ public static class EnhancePatch
             ?.Where(d => d.name.StartsWith("Mosaic_") || d.name.StartsWith("MosaicInsted_"))
             .ToList()
             .ForEach(d => d.gameObject.SetActive(false));
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(
+        typeof(SoundCautionPopupController),
+        nameof(SoundCautionPopupController.SetupPopupEvent)
+    )]
+    public static bool DisableSoundCaution(SoundCautionPopupController __instance)
+    {
+        if (!Config.SoundCaution.Value)
+        {
+            __instance._onClickOk.Invoke();
+            return false;
+        }
+
+        return true;
     }
 }

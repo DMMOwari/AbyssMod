@@ -17,8 +17,9 @@ namespace AbyssMod
         #endregion
 #endif
 
-        #region
+        #region General
         public static ConfigEntry<bool> DynamicMosaic;
+        public static ConfigEntry<bool> SoundCaution;
         #endregion
 
         #region Translation
@@ -65,6 +66,12 @@ namespace AbyssMod
                 "DynamicMosaic",
                 false,
                 "是否启用游戏内动态马赛克"
+            );
+            SoundCaution = Plugin.ConfigFile.Bind(
+                "General",
+                "SoundCaution",
+                false,
+                "是否启用进入游戏时的音量提醒弹窗"
             );
             #endregion
 

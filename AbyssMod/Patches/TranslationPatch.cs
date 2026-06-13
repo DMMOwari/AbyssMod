@@ -11,10 +11,17 @@ namespace AbyssMod.Patches;
 [HarmonyPatch]
 public static class TranslationPatch
 {
-    private static TopScene _topScene;
+    private static NovelController _novelController;
     private static string NovelId
     {
-        get => _topScene?._param?.novelId ?? string.Empty;
+        get => _novelController?._common?.ScriptId ?? string.Empty;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(NovelController), nameof(NovelController.InitNovel))]
+    public static void InitNovelController(NovelController __instance)
+    {
+        _novelController = __instance;
     }
 
     public static bool TryGetCurrentNovel(
@@ -26,9 +33,6 @@ public static class TranslationPatch
             && Plugin.Trans.Novels.TryGetValue(NovelId, out translation);
     }
 
-    /// <summary>
-    /// 剧情加载时获取对应 Novel ID，触发翻译数据预加载。
-    /// </summary>
     [HarmonyPostfix]
     [HarmonyPatch(typeof(NovelPathUtility), nameof(NovelPathUtility.GetNovelScenarioDirectory))]
     public static void SetupTranslation(string novelId)
@@ -48,12 +52,15 @@ public static class TranslationPatch
         if (TryGetCurrentNovel(out var _))
         {
             string title = __result.Item1;
-            if (title != null && Plugin.Trans.Titles.TryGetValue(title, out string text))
+            if (
+                !string.IsNullOrEmpty(title)
+                && Plugin.Trans.Titles.TryGetValue(title, out string text)
+            )
                 __result.Item1 = text;
 
             string description = __result.Item2;
             if (
-                description != null
+                !string.IsNullOrEmpty(description)
                 && Plugin.Trans.Descriptions.TryGetValue(description, out string desc)
             )
                 __result.Item2 = desc;
@@ -66,7 +73,10 @@ public static class TranslationPatch
     {
         if (TryGetCurrentNovel(out var _))
         {
-            if (title != null && Plugin.Trans.Titles.TryGetValue(title, out string text))
+            if (
+                !string.IsNullOrEmpty(title)
+                && Plugin.Trans.Titles.TryGetValue(title, out string text)
+            )
                 title = text;
         }
     }
@@ -77,7 +87,9 @@ public static class TranslationPatch
     {
         if (TryGetCurrentNovel(out var _))
         {
-            if (name != null && Plugin.Trans.Names.TryGetValue(name, out string text))
+            if (
+                !string.IsNullOrEmpty(name) && Plugin.Trans.Names.TryGetValue(name, out string text)
+            )
                 name = text;
         }
     }
@@ -88,32 +100,72 @@ public static class TranslationPatch
     {
         if (TryGetCurrentNovel(out var translation))
         {
-            if (message != null && translation.TryGetValue(message, out string text))
+            if (!string.IsNullOrEmpty(message) && translation.TryGetValue(message, out string text))
                 message = text;
         }
     }
 
     [HarmonyPrefix]
     [HarmonyPatch(typeof(NovelLogPopup), nameof(NovelLogPopup.SetData))]
-    public static void SetLog(List<NovelLogData> dataList)
+    public static void SetLog(ref List<NovelLogData> dataList)
     {
         if (TryGetCurrentNovel(out var translation))
         {
+            List<NovelLogData> list = new();
             foreach (var data in dataList)
             {
-                if (data.Name != null && Plugin.Trans.Names.TryGetValue(data.Name, out string name))
-                    data.Name = name;
+                var logData = new NovelLogData(
+                    data.ScriptId,
+                    data.AssetId,
+                    data.Name,
+                    data.Message,
+                    data.LogId,
+                    data.Voice,
+                    data.Ct
+                );
 
-                if (data.Message != null && translation.TryGetValue(data.Message, out string text))
-                    data.Message = text;
+                if (
+                    !string.IsNullOrEmpty(data.Name)
+                    && Plugin.Trans.Names.TryGetValue(data.Name, out string name)
+                )
+                    logData.Name = name;
+
+                if (
+                    !string.IsNullOrEmpty(data.Message)
+                    && translation.TryGetValue(data.Message, out string text)
+                )
+                    logData.Message = text;
+
+                list.Add(logData);
             }
+            dataList = list;
         }
     }
 
     [HarmonyPrefix]
-    [HarmonyPatch(typeof(TopScene), nameof(TopScene.CreateNovelProcessCallBacks))]
-    public static void SetNovelProcessCallback(TopScene __instance)
+    [HarmonyPatch(typeof(NovelModelDotBalloon), nameof(NovelModelDotBalloon.StartBalloonMessage))]
+    public static void SetBalloon(CommandDotMessageData messageData)
     {
-        _topScene = __instance;
+        if (TryGetCurrentNovel(out var translation))
+        {
+            string message = messageData.Message;
+            if (!string.IsNullOrEmpty(message) && translation.TryGetValue(message, out string text))
+                messageData.Message = text;
+        }
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(
+        typeof(NovelMessageTextComponent),
+        nameof(NovelMessageTextComponent.SetMessageText)
+    )]
+    public static void SetTextCenter(NovelModelCommon common, CommandMessageTextData data)
+    {
+        if (TryGetCurrentNovel(out var translation))
+        {
+            string message = data.Message;
+            if (!string.IsNullOrEmpty(message) && translation.TryGetValue(message, out string text))
+                data.Message = text;
+        }
     }
 }
