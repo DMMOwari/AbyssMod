@@ -1,4 +1,5 @@
 using System.Linq;
+using Absf;
 using HarmonyLib;
 using Project.Notice;
 using Project.Novel;
@@ -11,6 +12,8 @@ namespace AbyssMod.Patches;
 [HarmonyPatch]
 public static class EnhancePatch
 {
+    private static int _allowStopVoiceCount;
+
     [HarmonyPostfix]
     [HarmonyPatch(typeof(NovelLive2DObject), nameof(NovelLive2DObject.Initialize))]
     public static void DisableMosaic(NovelLive2DObject __instance)
@@ -39,5 +42,33 @@ public static class EnhancePatch
         }
 
         return true;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(NovelSoundManager), nameof(NovelSoundManager.StopCategory))]
+    public static bool CancelStoppingVoice(int nCategory, bool playFade)
+    {
+        if (Config.VoiceInterruption.Value || _allowStopVoiceCount > 0)
+            return true;
+
+        return nCategory != 2 || playFade;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(NovelSoundManager), nameof(NovelSoundManager.PlaySound))]
+    public static void StopVoiceBeforePlaying(NovelSoundManager __instance, SoundCategory category)
+    {
+        if (!Config.VoiceInterruption.Value && category == SoundCategory.Voice)
+        {
+            _allowStopVoiceCount++;
+            try
+            {
+                __instance.StopCategory(2, false);
+            }
+            finally
+            {
+                _allowStopVoiceCount--;
+            }
+        }
     }
 }

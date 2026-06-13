@@ -20,12 +20,15 @@ namespace AbyssMod
         #region General
         public static ConfigEntry<bool> DynamicMosaic;
         public static ConfigEntry<bool> SoundCaution;
+        public static ConfigEntry<bool> VoiceInterruption;
         #endregion
 
         #region Translation
         public static ConfigEntry<bool> Translation;
         public static ConfigEntry<string> TranslationCDN;
         public static ConfigEntry<string> TranslationLanguage;
+        public static ConfigEntry<string> TranslationCryptoTag;
+        public static ConfigEntry<string> TranslationCryptoKey;
         #endregion
 
         #region Font
@@ -73,6 +76,12 @@ namespace AbyssMod
                 false,
                 "是否启用进入游戏时的音量提醒弹窗"
             );
+            VoiceInterruption = Plugin.ConfigFile.Bind(
+                "General",
+                "VoiceInterruption",
+                false,
+                "剧情中播放下一段无声文本时是否中断当前角色语音"
+            );
             #endregion
 
             #region Translation
@@ -93,6 +102,18 @@ namespace AbyssMod
                 "Language",
                 "zh_Hans",
                 "翻译语言，取值范围：[zh_Hans]"
+            );
+            TranslationCryptoTag = Plugin.ConfigFile.Bind(
+                "Translation.Crypto",
+                "Tag",
+                "ENC:",
+                "翻译文本加密标签（可选）"
+            );
+            TranslationCryptoKey = Plugin.ConfigFile.Bind(
+                "Translation.Crypto",
+                "Key",
+                "woshitonghuadawang",
+                "翻译文本解密密钥（可选）"
             );
             #endregion
 

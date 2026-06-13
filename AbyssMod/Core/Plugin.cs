@@ -18,7 +18,7 @@ namespace AbyssMod;
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 public class Plugin : BasePlugin
 {
-    private const int HttpTimeoutSeconds = 30;
+    private const int HttpTimeoutSeconds = 10;
     private const int PooledConnectionLifetimeMinutes = 5;
     private const int PooledConnectionIdleTimeoutMinutes = 2;
 
@@ -61,15 +61,12 @@ public class Plugin : BasePlugin
 
     private static void Initialize()
     {
-        var httpClient = new HttpClient(
-            new SocketsHttpHandler
-            {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(PooledConnectionLifetimeMinutes),
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(
-                    PooledConnectionIdleTimeoutMinutes
-                ),
-            }
-        )
+        var socketsHandler = new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(PooledConnectionLifetimeMinutes),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(PooledConnectionIdleTimeoutMinutes),
+        };
+        var httpClient = new HttpClient(new CryptoHandler(socketsHandler))
         {
             Timeout = TimeSpan.FromSeconds(HttpTimeoutSeconds),
         };
