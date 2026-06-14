@@ -1,6 +1,7 @@
 using HarmonyLib;
 using Il2CppSystem;
 using Il2CppSystem.Collections.Generic;
+using Il2CppSystem.Threading;
 using Project.Novel;
 
 namespace AbyssMod.Patches;
@@ -106,40 +107,59 @@ public static class TranslationPatch
     }
 
     [HarmonyPrefix]
+    [HarmonyPatch(typeof(NovelModelMessageLog), nameof(NovelModelMessageLog.Add))]
+    public static void SetLogAdd(
+        string scriptId,
+        string assetId,
+        ref string charaName,
+        ref string message,
+        string logId,
+        NovelSound voice,
+        CancellationToken ct
+    )
+    {
+        charaName = charaName?.Replace("<user>", "%user%");
+        message = message?.Replace("<user>", "%user%");
+    }
+
+    [HarmonyPrefix]
     [HarmonyPatch(typeof(NovelLogPopup), nameof(NovelLogPopup.SetData))]
     public static void SetLog(ref List<NovelLogData> dataList)
     {
-        if (TryGetCurrentNovel(out var translation))
+        List<NovelLogData> list = new();
+        foreach (var data in dataList)
         {
-            List<NovelLogData> list = new();
-            foreach (var data in dataList)
+            string name = data.Name?.Replace("%user%", "<user>");
+            string message = data.Message?.Replace("%user%", "<user>");
+
+            if (TryGetCurrentNovel(out var translation))
             {
-                var logData = new NovelLogData(
+                if (
+                    !string.IsNullOrEmpty(name)
+                    && Plugin.Trans.Names.TryGetValue(name, out string _name)
+                )
+                    name = _name;
+
+                if (
+                    !string.IsNullOrEmpty(message)
+                    && translation.TryGetValue(message, out string _message)
+                )
+                    message = _message;
+            }
+
+            list.Add(
+                new NovelLogData(
                     data.ScriptId,
                     data.AssetId,
-                    data.Name,
-                    data.Message,
+                    name,
+                    message,
                     data.LogId,
                     data.Voice,
                     data.Ct
-                );
-
-                if (
-                    !string.IsNullOrEmpty(data.Name)
-                    && Plugin.Trans.Names.TryGetValue(data.Name, out string name)
                 )
-                    logData.Name = name;
-
-                if (
-                    !string.IsNullOrEmpty(data.Message)
-                    && translation.TryGetValue(data.Message, out string text)
-                )
-                    logData.Message = text;
-
-                list.Add(logData);
-            }
-            dataList = list;
+            );
         }
+        dataList = list;
     }
 
     [HarmonyPrefix]
